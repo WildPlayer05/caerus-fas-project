@@ -1,0 +1,16 @@
+# Laravel & PHP
+/vendor/
+node_modules/
+public/hot
+public/storage
+storage/*.key
+.env
+.env.backup
+.phpunit.result.cache
+
+# Docker
+#docker/mysql/ dati di esempio, non reali. Li carico su git quindi
+
+# OS Files
+.DS_Store
+Thumbs.db

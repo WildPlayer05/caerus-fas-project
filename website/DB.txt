@@ -1,0 +1,12 @@
+users(id, name*, surname*, ragSoc, PIVA*, email, phoneNumber, CF, password, email_verified_at*)
+supplier(id, name, email, password, IBAN, authorized)
+contractType(id, idS, type, KWh*, energyType, minimumDuration*, priceE*, priceG*)
+building(id, city, CAP, street, civicNumber)
+consumption(idB, date, KW*, mC*)
+contracts(id, idU, idB, idT, date, rinovate, paymentType)
+
+Note:
+- type {'home', 'business}
+- energyType {'E', 'G', 'EG'}
+- authorized: boolean
+
