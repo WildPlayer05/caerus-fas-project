@@ -9,6 +9,7 @@ use Laravel\Sanctum\HasApiTokens;
 class Supplier extends Authenticatable
 {
     use HasApiTokens, HasFactory;
+    public $timestamps=false;
 
     /**
      * The attributes that are mass assignable.
