@@ -42,6 +42,8 @@ services:
       REDIS_PASSWORD: null
       REDIS_PORT: 6379
 
+      SENTRY_LARAVEL_DSN: "https://72bbe1585bf9618d66da9456fa4a7ec3@o4511613889806336.ingest.de.sentry.io/4511614040473680"
+
   web:
     build:
       context: .

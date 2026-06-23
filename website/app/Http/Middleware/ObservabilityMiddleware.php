@@ -7,7 +7,10 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Sentry\State\Scope;
 use Symfony\Component\HttpFoundation\Response;
+
+use function Sentry\configureScope;
 
 /**
  * Middleware "infrastrutturale" di Observability.
@@ -32,6 +35,15 @@ class ObservabilityMiddleware
         $start = microtime(true);
         $requestId = (string) Str::uuid();
         $request->attributes->set('request_id', $requestId);
+
+        // Correlazione con Sentry: se un'eccezione viene riportata durante
+        // l'elaborazione di questa richiesta, porterà con sé lo stesso
+        // request_id presente nei log/header di Observability, per
+        // incrociare facilmente errore e traccia RED corrispondente.
+        // Se Sentry non è configurato (nessun DSN) è un'operazione no-op.
+        configureScope(function (Scope $scope) use ($requestId): void {
+            $scope->setTag('request_id', $requestId);
+        });
 
         /** @var Response $response */
         $response = $next($request);
