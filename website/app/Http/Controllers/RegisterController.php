@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\VerificationCodeMail;
+use App\Support\Analytics\AnalyticsTracker;
 use Carbon\Carbon;
 use Validator;
 use Illuminate\Http\Request;
@@ -43,6 +44,11 @@ class RegisterController extends Controller
             'email_verified_at' => null,
         ]);
 
+        AnalyticsTracker::track('user_registered', $validatedData['email'], [
+            'type' => 'private',
+            'request_id' => $request->attributes->get('request_id'),
+        ]);
+
         return $this->otp($validatedData['email']);
     }
 
@@ -73,6 +79,11 @@ class RegisterController extends Controller
             'email_verified_at' => null,
         ]);
 
+        AnalyticsTracker::track('user_registered', $validatedData['email'], [
+            'type' => 'business',
+            'request_id' => $request->attributes->get('request_id'),
+        ]);
+
         return $this->otp($validatedData['email']);
     }
 
@@ -97,6 +108,11 @@ class RegisterController extends Controller
             'IBAN' => $validatedData['iban'],
             'password' => bcrypt($validatedData['password']),
             'authorized' => false,
+        ]);
+
+        AnalyticsTracker::track('user_registered', $validatedData['email'], [
+            'type' => 'supplier',
+            'request_id' => $request->attributes->get('request_id'),
         ]);
 
         return redirect()->route('acceptance');

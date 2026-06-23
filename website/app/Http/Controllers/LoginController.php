@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\RegisterController;
+use App\Support\Analytics\AnalyticsTracker;
 
 class LoginController extends Controller
 {
@@ -30,6 +31,12 @@ class LoginController extends Controller
                 }
 
                 Auth::user();
+
+                AnalyticsTracker::track('user_login', $validatedData['email'], [
+                    'type' => 'supplier',
+                    'request_id' => $request->attributes->get('request_id'),
+                ]);
+
                 return redirect()->route('supplier.overview');
         }
 
@@ -42,6 +49,11 @@ class LoginController extends Controller
                 return RegisterController::otp($validatedData['email']);
             }
             Auth::user();
+
+            AnalyticsTracker::track('user_login', $validatedData['email'], [
+                'type' => 'user',
+                'request_id' => $request->attributes->get('request_id'),
+            ]);
 
             if ($redint) return redirect($redint);
 

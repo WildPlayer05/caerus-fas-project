@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use Carbon\Carbon;
 
+use App\Support\Analytics\AnalyticsTracker;
 use Illuminate\Support\Facades\DB;
 
 class ScheduleController extends Controller
@@ -89,6 +90,11 @@ class ScheduleController extends Controller
             'IVA' => $IVA,
             'transport' => $transport,
             'meter' => $meter,
+        ]);
+
+        AnalyticsTracker::track('invoice_generated', 'system', [
+            'contract_id' => $building->id,
+            'amount' => $amount,
         ]);
     }
 }

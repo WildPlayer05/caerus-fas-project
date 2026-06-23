@@ -82,9 +82,15 @@ L'applicazione espone l'endpoint `/metrics` in formato testuale compatibile con 
 
 Le eccezioni non gestite vengono inviate automaticamente a Sentry tramite il package `sentry/sentry-laravel`, con raccolta di stack trace, contesto della richiesta e raggruppamento/deduplicazione automatica degli errori ripetuti. In assenza della variabile `SENTRY_LARAVEL_DSN`, l'integrazione resta inattiva.
 
+### Analytics
+
+Oltre alle metriche operative (RED) e all'error tracking, il progetto traccia un insieme di eventi di business tramite PostHog (modalità SaaS). Gli eventi raccolti sono: registrazione utente (`user_registered`), accesso (`user_login`), creazione di un contratto (`contract_created`), mancato rinnovo di un contratto (`contract_dismissed`) e generazione di una fattura (`invoice_generated`). In assenza della variabile `POSTHOG_KEY`, il tracciamento resta inattivo.
+
+A differenza di Prometheus e Grafana, la cui configurazione è interamente provisionata da codice, PostHog non genera grafici automaticamente: gli eventi sono visibili in tempo reale nella sezione Activity del progetto, ma i grafici e le dashboard vanno creati manualmente dall'interfaccia, selezionando l'evento desiderato e il tipo di aggregazione.
+
 ## Variabili d'ambiente
 
-In virtù dell'architettura basata su Docker, non è necessario configurare file `.env` locali per i parametri vitali (database, Redis, APP_KEY, Sentry). Tali variabili sono gestite centralmente dal file `docker-compose.yaml` e iniettate a livello di sistema operativo nei container, sovrascrivendo eventuali configurazioni locali di Laravel. Questo garantisce che l'applicazione possa scalare senza disallineamenti tra i container.
+In virtù dell'architettura basata su Docker, non è necessario configurare file `.env` locali per i parametri vitali (database, Redis, APP_KEY, Sentry, PostHog). Tali variabili sono gestite centralmente dal file `docker-compose.yaml` e iniettate a livello di sistema operativo nei container, sovrascrivendo eventuali configurazioni locali di Laravel. Questo garantisce che l'applicazione possa scalare senza disallineamenti tra i container.
 
 
 ## Comandi utili

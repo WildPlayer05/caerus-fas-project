@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Support\Analytics\AnalyticsTracker;
 use Carbon\Carbon;
 use Spatie\LaravelPdf\Facades\Pdf;
 class ContractController extends Controller
@@ -84,6 +85,11 @@ class ContractController extends Controller
             ->where('id', $contract->idT)
             ->first();
 
+        AnalyticsTracker::track('contract_created', (string) Auth::user()->id, [
+            'contract_id' => $insertedId,
+            'request_id' => $request->attributes->get('request_id'),
+        ]);
+
         return redirect()->route('payment.form', ['contract' => $type]);
     }
 
@@ -100,6 +106,11 @@ class ContractController extends Controller
 
         DB::table('contract')->where('id', $id)->update([
             'rinovate' => false,
+        ]);
+
+        AnalyticsTracker::track('contract_dismissed', (string) Auth::user()->id, [
+            'contract_id' => $id,
+            'request_id' => $request->attributes->get('request_id'),
         ]);
 
         return redirect()->route('user.dashboard');

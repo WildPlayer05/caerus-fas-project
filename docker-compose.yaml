@@ -44,6 +44,9 @@ services:
 
       SENTRY_LARAVEL_DSN: ${SENTRY_LARAVEL_DSN}
 
+      POSTHOG_KEY: ${POSTHOG_KEY}
+      POSTHOG_HOST: ${POSTHOG_HOST}
+
   web:
     build:
       context: .
