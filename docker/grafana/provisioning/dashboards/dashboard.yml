@@ -1,0 +1,10 @@
+# Provider di dashboard: dice a Grafana di caricare automaticamente,
+# all'avvio, ogni file .json presente in questa stessa cartella.
+apiVersion: 1
+
+providers:
+  - name: Caerus
+    folder: Caerus
+    type: file
+    options:
+      path: /etc/grafana/provisioning/dashboards

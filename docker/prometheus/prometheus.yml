@@ -1,0 +1,16 @@
+# Configurazione minima di Prometheus per l'app Caerus.
+#
+# Lo scrape target è il servizio "web" (Nginx), non direttamente "app":
+# le richieste passano così per lo stesso load balancer round-robin usato
+# da un utente reale. Non è un problema che lo scrape colpisca sempre un
+# container "app" diverso, perché le metriche RED sono già aggregate in
+# Redis (shared store, vedi RedMetricsCollector) e quindi identiche
+# indipendentemente da quale container risponde.
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: caerus
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["web:80"]

@@ -1,5 +1,6 @@
 <?php
 
+use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -121,6 +122,19 @@ return [
         'null' => [
             'driver' => 'monolog',
             'handler' => NullHandler::class,
+        ],
+
+        // Canale dedicato all'Observability: un log JSON per riga (un evento
+        // per richiesta HTTP), separato dal log applicativo "stack" per non
+        // mischiare diagnostica SRE e log di business.
+        'observability' => [
+            'driver' => 'monolog',
+            'handler' => StreamHandler::class,
+            'with' => [
+                'stream' => storage_path('logs/observability.log'),
+            ],
+            'formatter' => JsonFormatter::class,
+            'level' => env('LOG_LEVEL', 'debug'),
         ],
 
         'emergency' => [

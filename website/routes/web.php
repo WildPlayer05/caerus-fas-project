@@ -96,3 +96,7 @@ Route::middleware(['auth:supplier'])->group(function () {
 Route::get('chart', function () {
     return view('fatturaChart');
 });
+
+// Observability: endpoint di scraping in formato Prometheus (RED metrics).
+// In produzione va protetto a livello di rete/reverse-proxy (non è dato pubblico applicativo).
+Route::get('/metrics', [\App\Http\Controllers\MetricsController::class, 'index'])->name('metrics');
