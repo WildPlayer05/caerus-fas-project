@@ -1,5 +1,3 @@
-# Datasource provisioning: collega automaticamente Grafana a Prometheus
-# all'avvio, senza bisogno di configurarlo a mano dalla UI.
 apiVersion: 1
 
 datasources:

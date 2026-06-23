@@ -24,10 +24,6 @@ class Handler extends ExceptionHandler
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
-            // Catch + Enrich + Aggregate: ogni eccezione non gestita arriva
-            // a Sentry con stack trace, contesto richiesta e grouping
-            // automatico. Se SENTRY_LARAVEL_DSN non è impostato, l'SDK non
-            // invia nulla: questa riga è quindi sicura anche in locale/CI.
             if (app()->bound('sentry')) {
                 app('sentry')->captureException($e);
             }

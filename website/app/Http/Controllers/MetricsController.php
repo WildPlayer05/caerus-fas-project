@@ -5,12 +5,6 @@ namespace App\Http\Controllers;
 use App\Support\Metrics\RedMetricsCollector;
 use Illuminate\Http\Response;
 
-/**
- * Espone le metriche RED aggregate in formato testuale compatibile con lo
- * scraping stile Prometheus (text exposition format), pronte per essere
- * collegate a un sistema di alerting/dashboard senza toccare la logica
- * applicativa.
- */
 class MetricsController extends Controller
 {
     public function __construct(private RedMetricsCollector $metrics)
@@ -35,6 +29,10 @@ class MetricsController extends Controller
             if ($row['p99_ms'] !== null) {
                 $lines[] = "http_request_duration_p99_ms{{$labels}} {$row['p99_ms']}";
             }
+        }
+
+        foreach ($this->metrics->containerSummary() as $container => $count) {
+            $lines[] = "http_requests_by_container_total{container=\"{$container}\"} {$count}";
         }
 
         return response(implode("\n", $lines)."\n")

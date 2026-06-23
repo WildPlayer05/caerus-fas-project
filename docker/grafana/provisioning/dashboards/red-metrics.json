@@ -63,6 +63,20 @@
           "legendFormat": "{{method}} {{route}}"
         }
       ]
+    },
+    {
+      "id": 5,
+      "title": "Distribuzione richieste per container",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "http_requests_by_container_total",
+          "legendFormat": "{{container}}"
+        }
+      ]
     }
   ]
 }

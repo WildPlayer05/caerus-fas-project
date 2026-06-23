@@ -1,91 +1,110 @@
-***
+# Caerus - Ambiente Docker e Livello di Observability
 
-# 🚀 Caerus - Laravel Docker Environment
+Questo repository contiene l'ambiente Docker scalabile per l'applicazione Laravel "Caerus", sviluppata nell'ambito del corso di Amministrazione di Sistema. L'infrastruttura è progettata per essere scalabile orizzontalmente, con persistenza delle sessioni su più container e un livello di Observability basato sulla metodologia SRE (metodo RED, log strutturati, error tracking).
 
-Questo repository contiene l'ambiente Docker scalabile per l'applicazione Laravel "Caerus". L'infrastruttura è progettata per essere pronta alla produzione, supportando il Load Balancing e la persistenza delle sessioni su più container.
-
-## 🏗 Architettura
+## Architettura
 
 L'ambiente è composto dai seguenti servizi:
-* **Nginx (`web`)**: Web server e **Load Balancer**. Riceve le richieste sulla porta 8000 e le distribuisce in Round-Robin ai container PHP.
-* **PHP-FPM (`app`)**: I container che eseguono il codice Laravel. Possono essere scalati orizzontalmente.
-* **MySQL (`db`)**: Database relazionale.
-* **Redis (`sessions-handler`)**: Utilizzato per centralizzare le **Sessioni** e la **Cache**. Fondamentale per evitare errori *419 Page Expired* dietro il Load Balancer.
 
----
+* **Nginx (`web`)**: web server e load balancer. Riceve le richieste sulla porta 8000 e le distribuisce in round-robin ai container PHP.
+* **PHP-FPM (`app`)**: container che eseguono il codice Laravel applicativo. Possono essere scalati orizzontalmente.
+* **MySQL (`db`)**: database relazionale.
+* **Redis (`sessions-handler`)**: utilizzato per centralizzare sessioni e cache, ed è anche lo store delle metriche RED aggregate.
+* **Prometheus (`prometheus`)**: raccoglie periodicamente le metriche RED esposte dall'applicazione sull'endpoint `/metrics`.
+* **Grafana (`grafana`)**: interfaccia di visualizzazione delle metriche, configurata automaticamente all'avvio tramite provisioning.
 
-## 🛠 Prerequisiti
+## Prerequisiti
+
 * Docker
 * Docker Compose
 * Git
 
----
+## Installazione
 
-## 🚀 Quick Start (Installazione da zero)
+Procedura per avviare il progetto dopo averlo clonato su un nuovo computer.
 
-Segui questi passaggi per avviare il progetto dopo averlo clonato su un nuovo computer:
-
-**1. Clona il repository e posizionati nella cartella:**
+**1. Clonazione del repository:**
 ```bash
 git clone https://github.com/WildPlayer05/caerus-fas-project.git
 cd caerus
 ```
 
-**2. Configura l'APP_KEY nel Docker Compose:**
-Affinché il Load Balancer e le sessioni funzionino correttamente, **TUTTI i container dell'applicazione devono condividere la stessa identica `APP_KEY`**. 
-Apri il file `docker-compose.yml`, cerca il servizio `app` e inserisci una chiave valida sotto la voce `environment` (puoi copiare quella di un vecchio progetto o generarne una):
+**2. Configurazione di APP_KEY:**
+Affinché il load balancer e la gestione delle sessioni funzionino correttamente, tutti i container dell'applicazione devono condividere la stessa `APP_KEY`. Aprire `docker-compose.yaml`, individuare il servizio `app` e inserire una chiave valida sotto `environment`:
 
 ```yaml
   app:
     environment:
-      APP_KEY: "base64:INSERISCI_QUI_LA_TUA_CHIAVE="
-      # ... altre variabili
+      APP_KEY: "base64:INSERIRE_QUI_LA_CHIAVE="
+      # altre variabili
 ```
 
-**3. Avvia i container Docker:**
-Avviamo l'infrastruttura creando, ad esempio, 3 container per l'applicazione PHP:
+**3. Avvio dei container:**
 ```bash
 docker-compose up -d --build --scale app=3
 ```
-*(Nota: Docker inietterà automaticamente l'APP_KEY e le credenziali del Database a tutti e 3 i container).*
+Docker inietta automaticamente APP_KEY e le credenziali del database in tutti i container dell'applicazione.
 
-**4. Inizializza il Database:**
-Lancia le migrazioni per creare le tabelle:
+**4. Inizializzazione del database:**
 ```bash
 docker-compose exec app php artisan migrate
 ```
-*(Nota: Attualmente non necessario in quanto viene ripristinato automaticamente un database di prova).*
+Non necessario nella configurazione corrente, in quanto viene ripristinato automaticamente un database di prova.
 
-🎉 **Fatto! L'applicazione è ora raggiungibile all'indirizzo: [http://localhost:8000](http://localhost:8000)**
+L'applicazione è raggiungibile all'indirizzo: http://localhost:8000
 
----
+## Observability
 
-## ⚙️ Variabili d'Ambiente (Twelve-Factor App)
+Il progetto implementa un livello di Observability secondo la metodologia SRE: metodo RED (Rate, Errors, Duration), Lossy Summaries, percentili P95/P99, log strutturati in formato JSON ed error tracking.
 
-Grazie all'architettura basata su Docker, **non è necessario** configurare file `.env` locali per i parametri vitali (Database, Redis, APP_KEY). 
+### Log strutturati in JSON
 
-Queste variabili vengono gestite centralmente dal file `docker-compose.yml` e iniettate a livello di sistema operativo nei container, sovrascrivendo qualsiasi configurazione locale di Laravel. Questo garantisce che l'applicazione possa scalare senza problemi di desincronizzazione tra i container.
+Ogni richiesta produce una riga di log in formato JSON sul canale dedicato `observability` (`storage/logs/observability.log`), contenente un identificativo di correlazione (`request_id`, propagato anche nell'header di risposta `X-Request-Id`), metodo HTTP, route, codice di stato, durata, indirizzo IP e container che ha servito la richiesta.
 
----
+### Metodo RED e Lossy Summaries
 
-## 🖥 Comandi Utili
+Ogni richiesta HTTP attraversa `ObservabilityMiddleware`, che misura Rate, Errors e Duration e aggrega il risultato in Redis tramite la classe `RedMetricsCollector`. L'aggregazione segue il pattern delle Lossy Summaries: nessun dato puntuale della singola richiesta viene conservato, solo contatori e bucket di istogramma, garantendo memoria costante indipendentemente dal volume di traffico. I percentili P95 e P99 sono stimati per interpolazione lineare sui bucket, analogamente alla funzione `histogram_quantile` di Prometheus.
 
-**Fermare tutti i container:**
+Le metriche sono condivise tra tutti i container `app` tramite lo store comune su Redis, risultando quindi coerenti indipendentemente da quale istanza abbia servito ciascuna richiesta.
+
+### Distribuzione del carico tra i container
+
+Ogni risposta include un header `X-Served-By` con l'hostname del container PHP-FPM che ha gestito la richiesta, utile per verificare che Nginx distribuisca correttamente il traffico in round-robin tra le repliche. La medesima informazione è disponibile anche come metrica aggregata (`http_requests_by_container_total`), per individuare eventuali squilibri di carico e supportare le decisioni relative allo scaling orizzontale.
+
+### Endpoint /metrics e dashboard Grafana
+
+L'applicazione espone l'endpoint `/metrics` in formato testuale compatibile con Prometheus. Prometheus effettua lo scrape di tale endpoint ogni 15 secondi; Grafana è preconfigurato con un datasource Prometheus e una dashboard, disponibile senza necessità di configurazione manuale.
+
+* Prometheus: http://localhost:9090
+* Grafana: http://localhost:3000 (credenziali: admin / admin)
+
+### Error tracking
+
+Le eccezioni non gestite vengono inviate automaticamente a Sentry tramite il package `sentry/sentry-laravel`, con raccolta di stack trace, contesto della richiesta e raggruppamento/deduplicazione automatica degli errori ripetuti. In assenza della variabile `SENTRY_LARAVEL_DSN`, l'integrazione resta inattiva.
+
+## Variabili d'ambiente
+
+In virtù dell'architettura basata su Docker, non è necessario configurare file `.env` locali per i parametri vitali (database, Redis, APP_KEY, Sentry). Tali variabili sono gestite centralmente dal file `docker-compose.yaml` e iniettate a livello di sistema operativo nei container, sovrascrivendo eventuali configurazioni locali di Laravel. Questo garantisce che l'applicazione possa scalare senza disallineamenti tra i container.
+
+
+## Comandi utili
+
+Fermare tutti i container:
 ```bash
 docker-compose down
 ```
 
-**Leggere i log in tempo reale:**
+Visualizzare i log in tempo reale:
 ```bash
 docker-compose logs -f
 ```
 
-**Eseguire comandi Artisan (es. svuotare la cache):**
-```bash
-docker-compose exec app php artisan optimize:clear
-```
-
-**Scalare l'applicazione a caldo (senza spegnere il server):**
+Scalare l'applicazione senza interrompere il servizio:
 ```bash
 docker-compose up -d --scale app=5
+```
+
+Verificare l'integrazione con Sentry:
+```bash
+docker-compose exec app php artisan sentry:test
 ```

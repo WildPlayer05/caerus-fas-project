@@ -124,9 +124,6 @@ return [
             'handler' => NullHandler::class,
         ],
 
-        // Canale dedicato all'Observability: un log JSON per riga (un evento
-        // per richiesta HTTP), separato dal log applicativo "stack" per non
-        // mischiare diagnostica SRE e log di business.
         'observability' => [
             'driver' => 'monolog',
             'handler' => StreamHandler::class,

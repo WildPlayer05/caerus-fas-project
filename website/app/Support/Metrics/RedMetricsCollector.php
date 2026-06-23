@@ -4,33 +4,21 @@ namespace App\Support\Metrics;
 
 use Illuminate\Support\Facades\Redis;
 
-/**
- * Collettore di metriche RED (Rate, Errors, Duration) basato su Redis.
- *
- * Implementa il pattern delle "Lossy Summaries": ogni richiesta viene
- * aggregata immediatamente in contatori e bucket di istogramma. Il valore
- * puntuale della singola richiesta non viene mai conservato: si perde il
- * dettaglio (lossy) ma si ottiene memoria costante e letture O(1),
- * indipendenti dal volume di traffico.
- */
+
 class RedMetricsCollector
 {
-    /**
-     * Limiti superiori dei bucket di latenza, in millisecondi
-     * (stesso significato del "le" di un histogram Prometheus).
-     */
+   
     private const BUCKETS = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000];
 
     private const KEY_PREFIX = 'metrics:red:';
 
     private const INDEX_KEY = self::KEY_PREFIX.'index';
 
-    /** Finestra temporale su cui "scorrono" le metriche aggregate. */
+    private const CONTAINER_KEY = self::KEY_PREFIX.'containers';
+
+    
     private const TTL_SECONDS = 86400;
 
-    /**
-     * Registra l'esito di una richiesta HTTP nei contatori aggregati.
-     */
     public function record(string $method, string $route, int $statusCode, float $durationMs): void
     {
         $key = self::KEY_PREFIX.$method.':'.$route;
@@ -53,9 +41,24 @@ class RedMetricsCollector
         });
     }
 
+    public function recordContainer(string $container): void
+    {
+        Redis::pipeline(function ($pipe) use ($container) {
+            $pipe->hincrby(self::CONTAINER_KEY, $container, 1);
+            $pipe->expire(self::CONTAINER_KEY, self::TTL_SECONDS);
+        });
+    }
+
     /**
-     * Ritorna, per ogni coppia metodo+route osservata, il riepilogo
-     * RED completo: requests_total, errors_total, error_ratio, P95, P99.
+     *
+     * @return array<string, int>
+     */
+    public function containerSummary(): array
+    {
+        return array_map('intval', Redis::hgetall(self::CONTAINER_KEY));
+    }
+
+    /**
      *
      * @return array<int, array<string, mixed>>
      */
@@ -96,10 +99,7 @@ class RedMetricsCollector
         return $summary;
     }
 
-    /**
-     * Stima un percentile per interpolazione lineare sui bucket dell'istogramma
-     * (lo stesso approccio usato da `histogram_quantile` in Prometheus).
-     */
+
     private function percentile(array $data, int $count, float $quantile): ?float
     {
         if ($count === 0) {
@@ -127,7 +127,6 @@ class RedMetricsCollector
             $previousCumulative = $cumulative;
         }
 
-        // Oltre l'ultimo bucket: stimiamo il percentile sul limite massimo osservato.
         return (float) end(self::BUCKETS);
     }
 }

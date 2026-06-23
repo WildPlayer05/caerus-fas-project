@@ -12,14 +12,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 use function Sentry\configureScope;
 
-/**
- * Middleware "infrastrutturale" di Observability.
- *
- * Misura ogni richiesta HTTP secondo il metodo RED (Rate, Errors, Duration)
- * e produce un log strutturato in JSON con request-id di correlazione.
- * Non modifica in alcun modo la risposta prodotta dai controller: si limita
- * a osservare richiesta/risposta che attraversano il pipeline.
- */
 class ObservabilityMiddleware
 {
     public function __construct(private RedMetricsCollector $metrics)
@@ -34,13 +26,9 @@ class ObservabilityMiddleware
 
         $start = microtime(true);
         $requestId = (string) Str::uuid();
+        $container = gethostname() ?: 'unknown';
         $request->attributes->set('request_id', $requestId);
 
-        // Correlazione con Sentry: se un'eccezione viene riportata durante
-        // l'elaborazione di questa richiesta, porterà con sé lo stesso
-        // request_id presente nei log/header di Observability, per
-        // incrociare facilmente errore e traccia RED corrispondente.
-        // Se Sentry non è configurato (nessun DSN) è un'operazione no-op.
         configureScope(function (Scope $scope) use ($requestId): void {
             $scope->setTag('request_id', $requestId);
         });
@@ -53,6 +41,7 @@ class ObservabilityMiddleware
         $statusCode = $response->getStatusCode();
 
         $this->metrics->record($request->method(), $route, $statusCode, $durationMs);
+        $this->metrics->recordContainer($container);
 
         Log::channel('observability')->info('http_request', [
             'request_id' => $requestId,
@@ -62,10 +51,12 @@ class ObservabilityMiddleware
             'duration_ms' => $durationMs,
             'is_error' => $statusCode >= 500,
             'ip' => $request->ip(),
+            'container' => $container,
             'timestamp' => now()->toIso8601String(),
         ]);
 
         $response->headers->set('X-Request-Id', $requestId);
+        $response->headers->set('X-Served-By', $container);
 
         return $response;
     }
