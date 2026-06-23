@@ -3,20 +3,34 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\MessageController;
+
 
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
 |
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
 */
+Route::get('/users', function () {
+    return DB::table('users')->get();
+});
 
-Route::middleware('auth:')->get('/profile', function (Request $request) {
+Route::get('/users/{id}', function ($id) {
+    $user= DB::table('users')->where('id', $id)->first();
+    return response()->json($user);
+});
+
+// TEST SUPPLIERS
+Route::get('/suppliers', function () {
+    return DB::table('suppliers')->get();
+});
+
+Route::get('/suppliers/{id}', function ($id) {
+    return DB::table('suppliers')->where('id', $id)->first();
+});
+Route::middleware('auth:sanctum')->get('/profile', function (Request $request) {
     return $request->user();
 });
 
@@ -72,4 +86,21 @@ Route::get("/setAlert/{boolean}", function ($boolean) {
 });
 Route::get("/getSettings", function () {
     return response()->json(['MEME' => env('MEME'), 'REGISTRATION' => env('REGISTRATION'), 'CHAT' => env('CHAT'), 'ALERT' => env('ALERT'), ], 200);
+});
+Route::post('/consumption', function(Request $request){
+    $request->validate([
+        'idB'=>'required|integer',
+        'date'=>'required|date',
+        'KW'=>'nullable|numeric',
+        'mc'=>'nullable|numeric',
+    ]);
+    DB::table('consumption')->insert([
+        'idB'=>$request->idB,
+        'date'=>$request->date,
+        'KW'=>$request->KW,
+        'mc'=>$request->mc,
+    ]);
+    return response()->json([
+        'message'=>'Consumption inserted'
+    ], 201);
 });
