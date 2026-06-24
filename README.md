@@ -88,6 +88,23 @@ Oltre alle metriche operative (RED) e all'error tracking, il progetto traccia un
 
 A differenza di Prometheus e Grafana, la cui configurazione è interamente provisionata da codice, PostHog non genera grafici automaticamente: gli eventi sono visibili in tempo reale nella sezione Activity del progetto, ma i grafici e le dashboard vanno creati manualmente dall'interfaccia, selezionando l'evento desiderato e il tipo di aggregazione.
 
+## Simulazione di traffico
+
+Per generare dati di prova è disponibile lo script `scripts/simulate_traffic.sh`. Lo script esegue richieste concorrenti contro l'applicazione, alternando navigazione di pagine pubbliche, login con un utente di test già presente nel database, registrazioni di nuovi utenti con dati casuali, tentativi di login con credenziali errate e una richiesta verso un endpoint che genera un'eccezione reale, propagata a Sentry.
+
+```bash
+chmod +x scripts/simulate_traffic.sh
+CONCURRENCY=20 ITERATIONS=100 ./scripts/simulate_traffic.sh
+```
+
+Variabili di configurazione:
+
+* `BASE_URL`: indirizzo dell'applicazione (default `http://localhost:8000`)
+* `CONCURRENCY`: numero di worker concorrenti (default `10`)
+* `ITERATIONS`: richieste eseguite da ciascun worker (default `50`)
+* `SLEEP_MIN` / `SLEEP_MAX`: intervallo casuale, in secondi, tra una richiesta e la successiva di ciascun worker (default `0` e `0.1`)
+
+
 ## Variabili d'ambiente
 
 In virtù dell'architettura basata su Docker, non è necessario configurare file `.env` locali per i parametri vitali (database, Redis, APP_KEY, Sentry, PostHog). Tali variabili sono gestite centralmente dal file `docker-compose.yaml` e iniettate a livello di sistema operativo nei container, sovrascrivendo eventuali configurazioni locali di Laravel. Questo garantisce che l'applicazione possa scalare senza disallineamenti tra i container.
@@ -114,3 +131,4 @@ Verificare l'integrazione con Sentry:
 ```bash
 docker-compose exec app php artisan sentry:test
 ```
+
