@@ -2,7 +2,6 @@ terraform {
   required_providers {
     multipass = {
       source = "todoroff/multipass" # rich provider: exposes ipv4 + cloud-init
-      # no version pin: `terraform init` takes the latest and writes the lock file
     }
     local = {
       source  = "hashicorp/local"
@@ -16,9 +15,8 @@ provider "multipass" {
 }
 
 locals {
-  # instance name -> Swarm role
   nodes = {
-    "caerus-edge"  = "edge" # manager: LB + redis + monitoring
+    "caerus-edge"  = "edge"
     "caerus-db"    = "db"
     "caerus-app-1" = "app"
     "caerus-app-2" = "app"
@@ -35,13 +33,11 @@ resource "multipass_instance" "node" {
   memory = var.memory
   disk   = var.disk
 
-  # inject your SSH key so Ansible can reach the VM as user "ubuntu"
   cloud_init = templatefile("${path.module}/cloud-init.yaml.tftpl", {
     ssh_key = local.ssh_pubkey
   })
 }
 
-# Hand-off to Ansible: write the inventory from the instance IPs.
 resource "local_file" "ansible_inventory" {
   filename = "${path.module}/../ansible/inventory.ini"
   content = templatefile("${path.module}/inventory.tftpl", {

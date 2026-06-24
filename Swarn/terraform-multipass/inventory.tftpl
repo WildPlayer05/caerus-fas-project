@@ -11,13 +11,11 @@ ${db} node_name=caerus-db
 ${apps[0]} node_name=caerus-app-1
 ${apps[1]} node_name=caerus-app-2
 
-# everything that is not the manager
 [workers]
 ${db} node_name=caerus-db
 ${apps[0]} node_name=caerus-app-1
 ${apps[1]} node_name=caerus-app-2
 
-# role labels applied to the Swarm nodes
 [edge:vars]
 caerus_role=edge
 [db:vars]

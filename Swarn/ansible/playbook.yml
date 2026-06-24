@@ -35,10 +35,10 @@
   hosts: manager
   become: true
   tasks:
-    - name: Swarm init (advertise on the host-only IP)
+    - name: Swarm init
       community.docker.docker_swarm:
         state: present
-        advertise_addr: "{{ inventory_hostname }}"
+        advertise_addr: "{{ ansible_default_ipv4.address }}"
       register: swarm_init
 
 - name: Join workers (db + app nodes)
@@ -48,11 +48,11 @@
     - name: Join the Swarm
       community.docker.docker_swarm:
         state: join
-        advertise_addr: "{{ inventory_hostname }}"
+        advertise_addr: "{{ ansible_default_ipv4.address }}"
         join_token: "{{ hostvars[groups['manager'][0]].swarm_init.swarm_facts.JoinTokens.Worker }}"
         remote_addrs:
-          - "{{ hostvars[groups['manager'][0]].inventory_hostname }}:2377"
-
+          - "{{ hostvars[groups['manager'][0]].ansible_default_ipv4.address }}:2377"
+          
 - name: Label every node with its role
   hosts: swarm
   become: true

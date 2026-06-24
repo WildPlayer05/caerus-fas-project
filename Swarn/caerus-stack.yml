@@ -41,16 +41,11 @@ services:
       POSTHOG_KEY: ${POSTHOG_KEY:-}
       POSTHOG_HOST: ${POSTHOG_HOST:-}
     networks: [caerus]
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 9000 || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
     deploy:
-      replicas: 2
+      replicas: 4
       placement:
         constraints: ["node.labels.caerus_role == app"]
-        max_replicas_per_node: 1         # exactly one app per app-VM
+        max_replicas_per_node: 2
       update_config: { parallelism: 1, order: start-first }
       restart_policy: { condition: on-failure }
 
@@ -67,11 +62,6 @@ services:
       - db_data:/var/lib/mysql
       - /opt/caerus/mysql:/docker-entrypoint-initdb.d:ro   # init SQL, copied here by Ansible
     networks: [caerus]
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     deploy:
       replicas: 1
       placement:
