@@ -1,0 +1,35 @@
+[manager]
+${edge} node_name=caerus-edge
+
+[edge]
+${edge} node_name=caerus-edge
+
+[db]
+${db} node_name=caerus-db
+
+[app]
+${apps[0]} node_name=caerus-app-1
+${apps[1]} node_name=caerus-app-2
+
+# everything that is not the manager
+[workers]
+${db} node_name=caerus-db
+${apps[0]} node_name=caerus-app-1
+${apps[1]} node_name=caerus-app-2
+
+# role labels applied to the Swarm nodes
+[edge:vars]
+caerus_role=edge
+[db:vars]
+caerus_role=db
+[app:vars]
+caerus_role=app
+
+[swarm:children]
+manager
+workers
+
+[swarm:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=${ssh_key_file}
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'

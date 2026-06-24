@@ -1,0 +1,116 @@
+- name: Base setup + Docker on every node
+  hosts: swarm
+  become: true
+  tasks:
+    - name: Set a unique hostname BEFORE Docker starts (so each Swarm node is distinct)
+      hostname:
+        name: "{{ node_name }}"
+
+    - name: Install base packages (+ python docker SDK used by the modules)
+      apt:
+        name: [ca-certificates, curl, gnupg, python3-docker]
+        update_cache: true
+
+    - name: Create keyring directory
+      file: { path: /etc/apt/keyrings, state: directory, mode: "0755" }
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        keyring: /etc/apt/keyrings/docker.gpg
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+
+    - name: Install Docker Engine
+      apt:
+        name: [docker-ce, docker-ce-cli, containerd.io, docker-compose-plugin]
+        update_cache: true
+
+    - name: Ensure Docker is running and enabled
+      service: { name: docker, state: started, enabled: true }
+
+- name: Initialize the Swarm manager (edge node)
+  hosts: manager
+  become: true
+  tasks:
+    - name: Swarm init (advertise on the host-only IP)
+      community.docker.docker_swarm:
+        state: present
+        advertise_addr: "{{ inventory_hostname }}"
+      register: swarm_init
+
+- name: Join workers (db + app nodes)
+  hosts: workers
+  become: true
+  tasks:
+    - name: Join the Swarm
+      community.docker.docker_swarm:
+        state: join
+        advertise_addr: "{{ inventory_hostname }}"
+        join_token: "{{ hostvars[groups['manager'][0]].swarm_init.swarm_facts.JoinTokens.Worker }}"
+        remote_addrs:
+          - "{{ hostvars[groups['manager'][0]].inventory_hostname }}:2377"
+
+- name: Label every node with its role
+  hosts: swarm
+  become: true
+  tasks:
+    - name: Apply role label (runs against the manager)
+      community.docker.docker_node:
+        hostname: "{{ node_name }}"
+        labels:
+          caerus_role: "{{ caerus_role }}"
+      delegate_to: "{{ groups['manager'][0] }}"
+
+- name: Ship bind-mount config files to the nodes that need them
+  hosts: swarm
+  become: true
+  tasks:
+    - name: Ensure /opt/caerus exists
+      file: { path: /opt/caerus, state: directory, mode: "0755" }
+
+    - name: MySQL init SQL -> db node
+      copy:
+        src: "{{ caerus_root }}/docker/mysql/"
+        dest: /opt/caerus/mysql/
+      when: caerus_role == "db"
+
+    - name: Prometheus config -> edge node
+      copy:
+        src: "{{ caerus_root }}/docker/prometheus/"
+        dest: /opt/caerus/prometheus/
+      when: caerus_role == "edge"
+
+    - name: Grafana provisioning -> edge node
+      copy:
+        src: "{{ caerus_root }}/docker/grafana/"
+        dest: /opt/caerus/grafana/
+      when: caerus_role == "edge"
+
+- name: Create secrets and deploy the stack (from the manager)
+  hosts: manager
+  become: true
+  tasks:
+    - name: Create Docker secrets (consumed by MySQL via *_FILE)
+      community.docker.docker_secret:
+        name: "{{ item.name }}"
+        data: "{{ item.value }}"
+        state: present
+      loop:
+        - { name: "db_root_password", value: "root" }
+        - { name: "db_password", value: "Caerus-db-01" }
+      no_log: true
+
+    - name: Copy the stack file to the manager
+      copy:
+        src: "{{ playbook_dir }}/../caerus-stack.yml"
+        dest: /opt/caerus/caerus-stack.yml
+        mode: "0644"
+
+    - name: Deploy the Caerus stack
+      community.docker.docker_stack:
+        name: caerus
+        compose:
+          - /opt/caerus/caerus-stack.yml

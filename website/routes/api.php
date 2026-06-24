@@ -17,6 +17,13 @@ Route::get('/users', function () {
     return DB::table('users')->get();
 });
 
+Route::get('/chi-sei', function () {
+    return response()->json([
+        'messaggio' => 'Richiesta elaborata con successo',
+        'container_id' => gethostname()
+    ]);
+});
+
 Route::get('/users/{id}', function ($id) {
     $user= DB::table('users')->where('id', $id)->first();
     return response()->json($user);

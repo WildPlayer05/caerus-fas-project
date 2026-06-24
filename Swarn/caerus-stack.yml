@@ -1,19 +1,9 @@
-# caerus-stack.yml — 4-node Docker Swarm
-#
-#   caerus-edge  (manager) : web (nginx LB) + redis + prometheus + grafana
-#   caerus-db    (worker)  : mysql
-#   caerus-app-1 (worker)  : php-fpm
-#   caerus-app-2 (worker)  : php-fpm
-#
-# Deploy:  docker stack deploy -c caerus-stack.yml caerus
-# NB: Swarm does NOT build. Build & push caerus-app / caerus-web first (see README).
-
 version: "3.8"
 
 services:
 
-  web:                                   # nginx = load balancer / entry point → edge
-    image: registry.example.com/caerus-web:1.0
+  web:
+    image: wildplayer05/caerus-web:1.0
     ports:
       - target: 80
         published: 8000
@@ -25,7 +15,7 @@ services:
         constraints: ["node.labels.caerus_role == edge"]
       restart_policy: { condition: on-failure }
 
-  sessions-handler:                      # redis → edge
+  sessions-handler:
     image: redis:alpine
     networks: [caerus]
     deploy:
@@ -34,15 +24,15 @@ services:
         constraints: ["node.labels.caerus_role == edge"]
       restart_policy: { condition: on-failure }
 
-  app:                                   # php-fpm → app-1 + app-2
-    image: registry.example.com/caerus-app:1.0
+  app:
+    image: wildplayer05/caerus-app:1.0
     environment:
       DB_CONNECTION: mysql
       DB_HOST: db
       DB_PORT: 3306
       DB_DATABASE: Caerus
       DB_USERNAME: Caerus
-      DB_PASSWORD: Caerus-db-01          # plain env (your app image doesn't read *_FILE)
+      DB_PASSWORD: Caerus-db-01
       SESSION_DRIVER: redis
       CACHE_STORE: redis
       REDIS_HOST: sessions-handler
@@ -64,7 +54,7 @@ services:
       update_config: { parallelism: 1, order: start-first }
       restart_policy: { condition: on-failure }
 
-  db:                                    # mysql → db node
+  db:
     image: mysql:8.0
     command: --skip-name-resolve
     environment:
@@ -88,7 +78,7 @@ services:
         constraints: ["node.labels.caerus_role == db"]
       restart_policy: { condition: on-failure }
 
-  prometheus:                            # → edge
+  prometheus:
     image: prom/prometheus:v2.53.2
     volumes:
       - /opt/caerus/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -101,7 +91,7 @@ services:
         constraints: ["node.labels.caerus_role == edge"]
       restart_policy: { condition: on-failure }
 
-  grafana:                               # → edge
+  grafana:
     image: grafana/grafana:10.4.5
     environment:
       GF_SECURITY_ADMIN_USER: admin
@@ -119,7 +109,7 @@ services:
 
 networks:
   caerus:
-    driver: overlay                      # multi-host internal network
+    driver: overlay
 
 volumes:
   db_data:
