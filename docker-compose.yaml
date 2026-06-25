@@ -24,6 +24,7 @@ services:
     build:
       context: .
       dockerfile: ./docker/app/Dockerfile
+    image: wildplayer05/caerus-app:1.0
     depends_on:
       - db
     environment:
@@ -49,6 +50,7 @@ services:
     build:
       context: .
       dockerfile: ./docker/nginx/Dockerfile
+    image: wildplayer05/caerus-web:1.0
     ports:
       - "8000:80"
     depends_on:

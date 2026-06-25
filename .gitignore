@@ -14,3 +14,10 @@ storage/*.key
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Terraform and ansible build
+inventory.ini
+terraform.tfstate
+terraform.tfstate.backup
+.terraform
+.terraform.lock.hcl
