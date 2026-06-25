@@ -7,7 +7,7 @@ services:
     ports:
       - target: 80
         published: 8000
-        mode: host                       # bind only on the edge node (single entry point)
+        mode: host           
     networks: [caerus]
     deploy:
       replicas: 1
@@ -60,7 +60,7 @@ services:
     secrets: [db_root_password, db_password]
     volumes:
       - db_data:/var/lib/mysql
-      - /opt/caerus/mysql:/docker-entrypoint-initdb.d:ro   # init SQL, copied here by Ansible
+      - /opt/caerus/mysql:/docker-entrypoint-initdb.d:ro   
     networks: [caerus]
     deploy:
       replicas: 1

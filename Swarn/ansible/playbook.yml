@@ -2,7 +2,7 @@
   hosts: swarm
   become: true
   tasks:
-    - name: Set a unique hostname BEFORE Docker starts (so each Swarm node is distinct)
+    - name: Set a unique hostname BEFORE Docker starts
       hostname:
         name: "{{ node_name }}"
 
@@ -31,7 +31,7 @@
     - name: Ensure Docker is running and enabled
       service: { name: docker, state: started, enabled: true }
 
-- name: Initialize the Swarm manager (edge node)
+- name: Initialize the Swarm manager
   hosts: manager
   become: true
   tasks:
@@ -57,7 +57,7 @@
   hosts: swarm
   become: true
   tasks:
-    - name: Apply role label (runs against the manager)
+    - name: Apply role label
       community.docker.docker_node:
         hostname: "{{ node_name }}"
         labels:
@@ -89,11 +89,11 @@
         dest: /opt/caerus/grafana/
       when: caerus_role == "edge"
 
-- name: Create secrets and deploy the stack (from the manager)
+- name: Create secrets and deploy the stack
   hosts: manager
   become: true
   tasks:
-    - name: Create Docker secrets (consumed by MySQL via *_FILE)
+    - name: Create Docker secrets
       community.docker.docker_secret:
         name: "{{ item.name }}"
         data: "{{ item.value }}"
